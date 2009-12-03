@@ -7,19 +7,18 @@ class LazySweeper < ActionController::Caching::Sweeper
   alias_method :after_save, :run
   alias_method :after_destroy, :run
 
-  # Sweep the entire page cache.
+  # Sweep the entire page cache destructively.
+  #
+  # Nothing will be removed unless the page cache directory is set to something else than the default public directory.
   def self.run
     dir = ActionController::Base.page_cache_directory
-
-    unless dir == "#{RAILS_ROOT}/public"
-      FileUtils.rm_r(Dir.glob("#{dir}/*")) rescue Errno::ENOENT
-      RAILS_DEFAULT_LOGGER.info("Cache directory #{dir.inspect} swept.")
+    unless dir == File.join(RAILS_ROOT, "public")
+      begin
+        FileUtils.rm_r(Dir["#{dir}/*"])
+        RAILS_DEFAULT_LOGGER.info("Cache directory #{dir.inspect} swept.")
+      rescue Errno::ENOENT
+        RAILS_DEFAULT_LOGGER.info("Error sweeping cache directory #{dir.inspect}.")
+      end
     end
-  end
-
-  # Watch the supplied models.
-  def self.observe(*models)
-    # this method only exists for documentation purposes
-    super
   end
 end
